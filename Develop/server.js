@@ -1,11 +1,15 @@
 const express = require('express');
 const path = require('path');
-const { clog } = require('./middleware/clog');
-const api = require('./routes/index.js');
-
+//const { clog } = require('./middleware/clog');
+const bp = require('body-parser');
+const router = express.Router();
+const fs = require('fs');
+var data = JSON.parse(fs.readFileSync("./db/db.json","utf8"));
 const PORT = process.env.port || 3001;
 
 const app = express();
+app.use(bp.json());
+app.use(bp.urlencoded({extended: false}));
 
 app.use(express.static('public'));
 app.get('/', (req, res) =>
@@ -15,59 +19,38 @@ app.get('/', (req, res) =>
 app.get('/notes', (req, res) =>
   res.sendFile(path.join(__dirname, 'public/notes.html'))
 );
-app.post('/api/notes', (req, res) => {
-    // exstract payload from js
-    fb.post('/', (req, res) => {
-        // Destructuring assignment for the items in req.body
-        const { email, feedbackType, feedback } = req.body;
-      
-        // If all the required properties are present
-        if (email && feedbackType && feedback) {
-          // Variable for the object we will save
-          const newFeedback = {
-            email,
-            feedbackType,
-            feedback,
-            feedback_id: uuidv4(),
-          };
-      
-          readAndAppend(newFeedback, './db/feedback.json');
-      
-          const response = {
-            status: 'success',
-            body: newFeedback,
-          };
-      
-          res.json(response);
-        } else {
-          res.json('Error in posting feedback');
-        }
-      });
-      
-      module.exports = fb;
-    // save it to your json file
-    app.get('/notes', function (req, res) {
-      res.send('notes.html')
-     
-      app.get('/notes', function (req, res) {
-        res.send('index.html')
+app.get('/api/notes', function(req,res){
+  console.log('data',data)
+  res.json(data);
+});
+app.get('/api/notes/:id', function(req,res){
+   res.json(data[Number(req.params.id)]);
+})
+app.post('/api/notes', function(req,res){
+  console.log(req.body);
+  let newNote=req.body;
+  newNote.id=data.length + 1;
+  //newNote.id=(data.length).toString();
+  (data.length >0)?data.push(newNote):data = [newNote];
+  
+  FSupdate()
+  res.json(data);
+})
 
-        app.post('/notes', function (req, res) {
-          res.send('POST request to the homepage')
-    })
+function FSupdate(){
+  fs.writeFileSync("./db/db.json", JSON.stringify(data),function(err){if (err) throw(err);})
 
-    const getNotes = () =>
-  fetch('/api/notes', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+}
+
+app.delete('/api/notes/:id', function(req,res){
+  let ID = req.params.id;
+  data = data.filter((note,index) =>{
+    return note.id != Number(ID);
   });
-
-
-
+  FSupdate();
+  res.json(data);
 })
 
 app.listen(PORT, () =>
   console.log(`Example app listening at http://localhost:${PORT}`)
-);})})
+);
